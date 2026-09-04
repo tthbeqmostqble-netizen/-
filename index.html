@@ -84,6 +84,140 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="client.js"></script>
+    <script>
+        const socket = io();
+
+        let playerName = '';
+        let currentRoom = '';
+        let isHost = false;
+
+        document.getElementById('login-btn').addEventListener('click', () => {
+            const nameInput = document.getElementById('playerName').value.trim();
+            if (!nameInput) {
+                alert('الرجاء إدخال اسمك أولاً!');
+                return;
+            }
+            playerName = nameInput;
+            document.getElementById('login-box').classList.add('hidden');
+            document.getElementById('menu-box').classList.remove('hidden');
+        });
+
+        document.getElementById('create-btn').addEventListener('click', () => {
+            const category = document.getElementById('categorySelect').value;
+            const difficulty = document.getElementById('difficultySelect').value;
+            const maxPlayers = document.getElementById('maxPlayers').value;
+
+            isHost = true;
+            socket.emit('create-room', { playerName, maxPlayers, category, difficulty });
+        });
+
+        document.getElementById('join-btn').addEventListener('click', () => {
+            const roomCode = document.getElementById('roomCodeInput').value.trim().toUpperCase();
+            if (!roomCode) {
+                alert('الرجاء إدخال رمز الغرفة!');
+                return;
+            }
+            isHost = false;
+            socket.emit('join-room', { playerName, roomCode });
+        });
+
+        socket.on('room-created', ({ roomCode, players }) => {
+            currentRoom = roomCode;
+            document.getElementById('menu-box').classList.add('hidden');
+            document.getElementById('game-box').classList.remove('hidden');
+            document.getElementById('display-code').innerText = roomCode;
+            
+            if (isHost) {
+                document.getElementById('start-game-btn').classList.remove('hidden');
+            } else {
+                document.getElementById('waiting-msg').classList.remove('hidden');
+            }
+            updatePlayersList(players);
+        });
+
+        socket.on('room-joined', ({ roomCode, players }) => {
+            currentRoom = roomCode;
+            document.getElementById('menu-box').classList.add('hidden');
+            document.getElementById('game-box').classList.remove('hidden');
+            document.getElementById('display-code').innerText = roomCode;
+            document.getElementById('waiting-msg').classList.remove('hidden');
+            updatePlayersList(players);
+        });
+
+        socket.on('update-players', (players) => {
+            updatePlayersList(players);
+        });
+
+        function updatePlayersList(players) {
+            const list = document.getElementById('players-list');
+            list.innerHTML = '';
+            players.forEach(p => {
+                const li = document.createElement('li');
+                li.innerText = p.name + (p.id === socket.id ? ' (أنت)' : '');
+                list.appendChild(li);
+            });
+        }
+
+        document.getElementById('start-game-btn').addEventListener('click', () => {
+            socket.emit('start-game', currentRoom);
+        });
+
+        socket.on('game-started', () => {
+            document.getElementById('game-box').classList.add('hidden');
+            document.getElementById('quiz-box').classList.remove('hidden');
+        });
+
+        socket.on('new-question', (data) => {
+            document.getElementById('feedback-container').classList.add('hidden');
+            document.getElementById('question-container').classList.remove('hidden');
+            
+            document.getElementById('question-text').innerText = data.question;
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+
+            data.options.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerText = opt;
+                btn.addEventListener('click', () => {
+                    socket.emit('submit-answer', { roomCode: currentRoom, answerIndex: index });
+                    // تعطيل الأزرار مؤقتاً بعد الإجابة
+                    const allBtns = optionsContainer.querySelectorAll('button');
+                    allBtns.forEach(b => b.disabled = true);
+                });
+                optionsContainer.appendChild(btn);
+            });
+        });
+
+        socket.on('waiting-for-others', (data) => {
+            document.getElementById('question-container').classList.add('hidden');
+            const feedbackContainer = document.getElementById('feedback-container');
+            const feedbackText = document.getElementById('feedback-text');
+            
+            feedbackContainer.classList.remove('hidden');
+            if (data.isCorrect) {
+                feedbackText.className = 'feedback correct';
+                feedbackText.innerText = `إجابة صحيحة! (+${data.pointsEarned} نقاط)`;
+            } else {
+                feedbackText.className = 'feedback wrong';
+                feedbackText.innerText = `إجابة خاطئة! الإجابة الصحيحة هي: ${data.correctAnswerText}`;
+            }
+        });
+
+        socket.on('game-over', (players) => {
+            document.getElementById('quiz-box').innerHTML = `
+                <h2>انتهت المسابقة!</h2>
+                <h3>نتائج اللاعبين:</h3>
+                <ul style="list-style: none; padding: 0;">
+                    ${players.map(p => `<li>${p.name}: ${p.score} نقطة</li>`).join('')}
+                </ul>
+                <button class="home-btn" onclick="location.reload()">العب مرة أخرى</button>
+            `;
+        });
+
+        socket.on('error-msg', (msg) => {
+            alert(msg);
+        });
+    </script>
 </body>
 </html>
