@@ -4,24 +4,81 @@
     <meta charset="UTF-8">
     <title>منصة المسابقات التفاعلية</title>
     <style>
-        body { font-family: Tahoma, sans-serif; background: #f4f7f6; text-align: center; padding: 30px; }
-        .box { background: white; padding: 25px; border-radius: 10px; max-width: 480px; margin: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        input, select, button { width: 90%; padding: 12px; margin: 10px 0; font-size: 16px; border-radius: 5px; border: 1px solid #ccc; }
-        button { background: #28a745; color: white; border: none; cursor: pointer; }
-        button:hover { background: #218838; }
-        .option-btn { background: #007bff; display: block; width: 90%; margin: 8px auto; }
+        :root {
+            --bg-color: #f4f7f6;
+            --box-bg: #ffffff;
+            --text-color: #333333;
+            --input-bg: #ffffff;
+            --input-border: #ccc;
+            --btn-bg: #28a745;
+            --btn-hover: #218838;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --box-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --input-bg: #2d2d2d;
+            --input-border: #444;
+            --btn-bg: #1e7e34;
+            --btn-hover: #155724;
+        }
+
+        body { 
+            font-family: Tahoma, sans-serif; 
+            background: var(--bg-color); 
+            color: var(--text-color); 
+            text-align: center; 
+            padding: 30px; 
+            transition: background 0.3s, color 0.3s;
+        }
+        .box { 
+            background: var(--box-bg); 
+            padding: 25px; 
+            border-radius: 10px; 
+            max-width: 480px; 
+            margin: auto; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+            transition: background 0.3s;
+        }
+        input, select, button { 
+            width: 90%; 
+            padding: 12px; 
+            margin: 10px 0; 
+            font-size: 16px; 
+            border-radius: 5px; 
+            border: 1px solid var(--input-border); 
+            background: var(--input-bg);
+            color: var(--text-color);
+        }
+        button { background: var(--btn-bg); color: white; border: none; cursor: pointer; }
+        button:hover { background: var(--btn-hover); }
+        .option-btn { background: #007bff; display: block; width: 90%; margin: 8px auto; color: white; }
         .option-btn:hover { background: #0056b3; }
-        .home-btn { background: #6c757d; margin-top: 15px; }
+        .home-btn { background: #6c757d; margin-top: 15px; color: white; }
         .home-btn:hover { background: #5a6268; }
+        .theme-toggle {
+            background: none;
+            border: 1px solid var(--input-border);
+            color: var(--text-color);
+            width: auto;
+            padding: 8px 15px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            border-radius: 20px;
+        }
         .hidden { display: none; }
-        #question-text { font-size: 18px; font-weight: bold; margin-bottom: 20px; color: #333; }
+        #question-text { font-size: 18px; font-weight: bold; margin-bottom: 20px; }
         .feedback { font-size: 18px; font-weight: bold; margin: 15px 0; }
         .correct { color: #28a745; }
         .wrong { color: #dc3545; }
-        label { display: block; text-align: right; margin-right: 5%; font-weight: bold; color: #444; }
+        label { display: block; text-align: right; margin-right: 5%; font-weight: bold; }
     </style>
 </head>
 <body>
+
+    <!-- زر تبديل الثيم -->
+    <button class="theme-toggle" id="theme-toggle-btn">🌙 الوضع المظلم</button>
 
     <!-- 1. شاشة تسجيل الدخول -->
     <div class="box" id="login-box">
@@ -47,6 +104,15 @@
             <option value="hard">صعبة</option>
         </select>
 
+        <label>عدد الأسئلة:</label>
+        <select id="questionCountSelect">
+            <option value="10">10 أسئلة</option>
+            <option value="20">20 سؤالاً</option>
+            <option value="30">30 سؤالاً</option>
+            <option value="40">40 سؤالاً</option>
+            <option value="50">50 سؤالاً</option>
+        </select>
+
         <label>عدد اللاعبين الأقصى:</label>
         <input type="number" id="maxPlayers" value="10" min="1" max="1000">
         
@@ -65,7 +131,7 @@
         <ul id="players-list" style="list-style: none; padding: 0;"></ul>
         
         <button id="start-game-btn" class="hidden">بدء المسابقة</button>
-        <p id="waiting-msg" class="hidden" style="color: #666;">انتظر حتى يقوم منشئ الغرفة ببدء المسابقة...</p>
+        <p id="waiting-msg" class="hidden" style="opacity: 0.7;">انتظر حتى يقوم منشئ الغرفة ببدء المسابقة...</p>
         <button class="home-btn" onclick="location.reload()">الرجوع للرئيسية</button>
     </div>
 
@@ -78,7 +144,7 @@
         </div>
         <div id="feedback-container" class="hidden">
             <p id="feedback-text" class="feedback"></p>
-            <p style="color: #666; font-size: 14px;">انتظر حتى ينتهي باقي اللاعبين من الإجابة...</p>
+            <p style="opacity: 0.7; font-size: 14px;">انتظر حتى ينتهي باقي اللاعبين من الإجابة...</p>
         </div>
         <button id="back-to-home-btn" class="home-btn hidden" onclick="location.reload()">الرجوع للرئيسية</button>
     </div>
@@ -88,11 +154,23 @@
         <h2>انتهت المسابقة!</h2>
         <h3>نتائج اللاعبين:</h3>
         <ul id="final-players-list" style="list-style: none; padding: 0;"></ul>
-        <button id="play-again-btn" style="background: #28a745;">العب مرة أخرى (شاشة الاختيار)</button>
+        <button id="play-again-btn" style="background: #28a745; color: white;">العب مرة أخرى (شاشة الاختيار)</button>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
+        const themeToggleBtn = document.getElementById('theme-toggle-btn');
+        themeToggleBtn.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            if (currentTheme === 'dark') {
+                document.documentElement.removeAttribute('data-theme');
+                themeToggleBtn.innerText = '🌙 الوضع المظلم';
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                themeToggleBtn.innerText = '☀️ الوضع الفاتح';
+            }
+        });
+
         const socket = io();
 
         let playerName = '';
@@ -113,10 +191,11 @@
         document.getElementById('create-btn').addEventListener('click', () => {
             const category = document.getElementById('categorySelect').value;
             const difficulty = document.getElementById('difficultySelect').value;
+            const questionCount = document.getElementById('questionCountSelect').value;
             const maxPlayers = document.getElementById('maxPlayers').value;
 
             isHost = true;
-            socket.emit('create-room', { playerName, maxPlayers, category, difficulty });
+            socket.emit('create-room', { playerName, maxPlayers, category, difficulty, questionCount });
         });
 
         document.getElementById('join-btn').addEventListener('click', () => {
@@ -179,7 +258,7 @@
             document.getElementById('feedback-container').classList.add('hidden');
             document.getElementById('question-container').classList.remove('hidden');
             
-            document.getElementById('question-text').innerText = data.question;
+            document.getElementById('question-text').innerText = `السؤال (${data.questionIndex + 1} من ${data.total}): ${data.question}`;
             const optionsContainer = document.getElementById('options-container');
             optionsContainer.innerHTML = '';
 
