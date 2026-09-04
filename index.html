@@ -83,6 +83,14 @@
         <button id="back-to-home-btn" class="home-btn hidden" onclick="location.reload()">الرجوع للرئيسية</button>
     </div>
 
+    <!-- 5. شاشة النهاية والنتائج -->
+    <div class="box hidden" id="game-over-box">
+        <h2>انتهت المسابقة!</h2>
+        <h3>نتائج اللاعبين:</h3>
+        <ul id="final-players-list" style="list-style: none; padding: 0;"></ul>
+        <button id="play-again-btn" style="background: #28a745;">العب مرة أخرى (شاشة الاختيار)</button>
+    </div>
+
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
@@ -181,7 +189,6 @@
                 btn.innerText = opt;
                 btn.addEventListener('click', () => {
                     socket.emit('submit-answer', { roomCode: currentRoom, answerIndex: index });
-                    // تعطيل الأزرار مؤقتاً بعد الإجابة
                     const allBtns = optionsContainer.querySelectorAll('button');
                     allBtns.forEach(b => b.disabled = true);
                 });
@@ -205,14 +212,22 @@
         });
 
         socket.on('game-over', (players) => {
-            document.getElementById('quiz-box').innerHTML = `
-                <h2>انتهت المسابقة!</h2>
-                <h3>نتائج اللاعبين:</h3>
-                <ul style="list-style: none; padding: 0;">
-                    ${players.map(p => `<li>${p.name}: ${p.score} نقطة</li>`).join('')}
-                </ul>
-                <button class="home-btn" onclick="location.reload()">العب مرة أخرى</button>
-            `;
+            document.getElementById('quiz-box').classList.add('hidden');
+            const gameOverBox = document.getElementById('game-over-box');
+            gameOverBox.classList.remove('hidden');
+
+            const finalPlayersList = document.getElementById('final-players-list');
+            finalPlayersList.innerHTML = '';
+            players.forEach(p => {
+                const li = document.createElement('li');
+                li.innerText = `${p.name}: ${p.score} نقطة`;
+                finalPlayersList.appendChild(li);
+            });
+        });
+
+        document.getElementById('play-again-btn').addEventListener('click', () => {
+            document.getElementById('game-over-box').classList.add('hidden');
+            document.getElementById('menu-box').classList.remove('hidden');
         });
 
         socket.on('error-msg', (msg) => {
