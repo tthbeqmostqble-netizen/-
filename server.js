@@ -7,6 +7,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+// هذا السطر يسمح للخادم بتقديم ملفات الواجهة والـ manifest للعامة بشكل صحيح
 app.use(express.static(path.join(__dirname)));
 
 app.get('/', (req, res) => {
@@ -108,7 +109,6 @@ io.on('connection', (socket) => {
         let availableQuestions = [...(questionBanks[category]?.[difficulty] || questionBanks.quran.easy)];
         availableQuestions.sort(() => Math.random() - 0.5);
         
-        // أخذ العدد المطلوب من الأسئلة أو المتوفر كحد أقصى
         const selectedQuestions = availableQuestions.slice(0, count);
 
         rooms[roomCode] = {
