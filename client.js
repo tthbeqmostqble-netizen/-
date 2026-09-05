@@ -1,4 +1,4 @@
-const socket = io("https://quiz-about-best-family-in-any-think.onrender.com/");
+const socket = io("http://glorious-encouragement-production.up.railway.app/");
 
 const loginBox = document.getElementById('login-box');
 const menuBox = document.getElementById('menu-box');
