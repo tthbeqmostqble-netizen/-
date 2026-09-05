@@ -1,4 +1,4 @@
-const socket = io("http://glorious-encouragement-production.up.railway.app/");
+const socket = io("accurate-courage-production-8e3e.up.railway.app");
 
 const loginBox = document.getElementById('login-box');
 const menuBox = document.getElementById('menu-box');
