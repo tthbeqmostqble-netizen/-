@@ -7,7 +7,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// هذا السطر يسمح للخادم بتقديم ملفات الواجهة والـ manifest للعامة بشكل صحيح
+// هذا السطر يسمح للخادم بتقديم ملفات الواجهة والـ manifest والأيقونات للعامة بشكل صحيح
 app.use(express.static(path.join(__dirname)));
 
 app.get('/', (req, res) => {
