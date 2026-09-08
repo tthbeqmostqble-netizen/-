@@ -1,12 +1,15 @@
 {
-  "background_color": "#ffffff",
-  "dir": "ltr",
-  "display": "standalone",
-  "name": "مسابقات لقرآن وأهل البيت عليهم السلام",
-  "orientation": "any",
-  "scope": "/",
-  "short_name": "Quiz Oline",
+  "name": "My TWA Game",
+  "short_name": "Game",
   "start_url": "/",
-  "theme_color": "#ffffff",
-  "description": "hhtjygnnnnn  tyjy"
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "https://upload.wikimedia.org/wikipedia/commons/3/3d/Android_Robot.svg.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
 }
