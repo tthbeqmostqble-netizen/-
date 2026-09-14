@@ -9,10 +9,12 @@ const io = new Server(server);
 
 app.use(express.static(path.join(__dirname)));
 
-app.get('/icon.png', (req, res) => {
+// حل مؤقت يمنع ظهور خطأ 404 للأيقونة إذا لم تكن في المجلد الصحيح
+app.get('/icon.png', (req, res) => res.status(204).send());
+
+app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
-
 const rooms = {};
 
 // بنك أسئلة موسع وكبير لتنوع الأسئلة
