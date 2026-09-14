@@ -9,8 +9,9 @@ const io = new Server(server);
 
 app.use(express.static(path.join(__dirname)));
 
-// حل مؤقت يمنع ظهور خطأ 404 للأيقونة إذا لم تكن في المجلد الصحيح
+// حل نهائي لمنع ظهور أخطاء الأيقونات المفقودة 404 في الـ Console
 app.get('/icon.png', (req, res) => res.status(204).send());
+app.get('/favicon.ico', (req, res) => res.status(204).send());
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
