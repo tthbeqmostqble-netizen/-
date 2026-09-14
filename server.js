@@ -7,11 +7,11 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(express.static(path.join(__dirname)));
-
-// حل نهائي لمنع ظهور أخطاء الأيقونات المفقودة 404 في الـ Console
+// معالجة طلبات الأيقونات قبل الـ static لتجنب خطأ 404 نهائياً
 app.get('/icon.png', (req, res) => res.status(204).send());
 app.get('/favicon.ico', (req, res) => res.status(204).send());
+
+app.use(express.static(path.join(__dirname)));
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
