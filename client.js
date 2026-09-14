@@ -1,156 +1,249 @@
 const socket = io("accurate-courage-production-8e3e.up.railway.app");
 
-const loginBox = document.getElementById('login-box');
-const menuBox = document.getElementById('menu-box');
-const gameBox = document.getElementById('game-box');
-const quizBox = document.getElementById('quiz-box');
+let myRoomCode = '';
+let isHost = false;
+let currentOptions = [];
+let timerInterval;
 
-const playerNameInput = document.getElementById('playerName');
-const loginBtn = document.getElementById('login-btn');
-const categorySelect = document.getElementById('categorySelect');
-const difficultySelect = document.getElementById('difficultySelect');
-const maxPlayersInput = document.getElementById('maxPlayers');
-const roomCodeInput = document.getElementById('roomCodeInput');
-const playersList = document.getElementById('players-list');
-const displayCode = document.getElementById('display-code');
-const startGameBtn = document.getElementById('start-game-btn');
-const waitingMsg = document.getElementById('waiting-msg');
-
-const questionText = document.getElementById('question-text');
-const optionsContainer = document.getElementById('options-container');
-const scoreDisplay = document.getElementById('score-display');
-const feedbackContainer = document.getElementById('feedback-container');
-const feedbackText = document.getElementById('feedback-text');
-const backToHomeBtn = document.getElementById('back-to-home-btn');
-
-let currentRoom = '';
-let playerName = '';
-
-loginBtn.addEventListener('click', () => {
-    playerName = playerNameInput.value.trim();
-    if (!playerName) {
-        alert('الرجاء إدخال اسمك أولاً للدخول!');
-        return;
-    }
-    loginBox.classList.add('hidden');
-    menuBox.classList.remove('hidden');
-});
-
-document.getElementById('create-btn').addEventListener('click', () => {
-    const maxPlayers = maxPlayersInput.value;
-    const category = categorySelect.value;
-    const difficulty = difficultySelect.value;
-
-    socket.emit('create-room', { playerName, maxPlayers, category, difficulty });
-});
-
-document.getElementById('join-btn').addEventListener('click', () => {
-    const roomCode = roomCodeInput.value.trim().toUpperCase();
-    if (!roomCode) return alert('الرجاء إدخال رمز الغرفة!');
-    socket.emit('join-room', { playerName, roomCode });
-});
-
-socket.on('room-created', ({ roomCode, players }) => {
-    currentRoom = roomCode;
-    showGameRoom(roomCode, players);
-    startGameBtn.classList.remove('hidden');
-    waitingMsg.classList.add('hidden');
-});
-
-socket.on('room-joined', ({ roomCode, players }) => {
-    currentRoom = roomCode;
-    showGameRoom(roomCode, players);
-    startGameBtn.classList.add('hidden');
-    waitingMsg.classList.remove('hidden');
-});
-
-socket.on('error-msg', (msg) => alert(msg));
-
-function showGameRoom(roomCode, players) {
-    menuBox.classList.add('hidden');
-    gameBox.classList.remove('hidden');
-    displayCode.textContent = roomCode;
-    updatePlayersUI(players);
+function showRoomOptions() {
+    const name = document.getElementById('player-name').value;
+    if (!name) return alert('الرجاء إدخال الاسم أولاً');
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('create-room-screen').classList.remove('hidden');
+    isHost = true;
 }
 
-startGameBtn.addEventListener('click', () => {
-    if (currentRoom) {
-        socket.emit('start-game', currentRoom);
+function showJoinScreen() {
+    const name = document.getElementById('player-name').value;
+    if (!name) return alert('الرجاء إدخال الاسم أولاً');
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('join-room-screen').classList.remove('hidden');
+}
+
+function createRoom() {
+    const name = document.getElementById('player-name').value;
+    const maxPlayers = document.getElementById('max-players').value;
+    const timeLimit = document.getElementById('time-limit').value;
+    const difficulty = document.getElementById('difficulty').value;
+    const totalQuestions = document.getElementById('total-questions').value;
+    const scoringMode = document.getElementById('scoring-mode').value;
+
+    socket.emit('createRoom', { playerName: name, maxPlayers, timeLimit, totalQuestions, difficulty, scoringMode });
+}
+
+function joinRoom() {
+    const name = document.getElementById('player-name').value;
+    const roomCode = document.getElementById('room-code-input').value.toUpperCase();
+    if (!roomCode) return alert('الرجاء إدخال كود الغرفة');
+    myRoomCode = roomCode;
+    socket.emit('joinRoom', { playerName: name, roomCode });
+}
+
+socket.on('roomCreated', ({ roomCode }) => {
+    myRoomCode = roomCode;
+    document.getElementById('create-room-screen').classList.add('hidden');
+    document.getElementById('waiting-screen').classList.remove('hidden');
+    document.getElementById('display-code').innerText = roomCode;
+    document.getElementById('start-btn').classList.remove('hidden');
+    document.getElementById('wait-msg').classList.add('hidden');
+});
+
+socket.on('errorMsg', (msg) => {
+    alert(msg);
+});
+
+socket.on('updatePlayers', (players) => {
+    document.getElementById('join-room-screen').classList.add('hidden');
+    document.getElementById('waiting-screen').classList.remove('hidden');
+    document.getElementById('display-code').innerText = myRoomCode;
+
+    if (!isHost) {
+        document.getElementById('start-btn').classList.add('hidden');
+        document.getElementById('wait-msg').classList.remove('hidden');
     }
-});
 
-socket.on('game-started', () => {
-    gameBox.classList.add('hidden');
-    quizBox.classList.remove('hidden');
-});
-
-socket.on('new-question', ({ question, options, questionIndex, total }) => {
-    feedbackContainer.classList.add('hidden');
-    questionText.style.display = 'block';
-    optionsContainer.style.display = 'block';
-
-    questionText.textContent = `السؤال (${questionIndex + 1}/${total}): ${question}`;
-    optionsContainer.innerHTML = '';
-
-    options.forEach((opt, index) => {
-        const btn = document.createElement('button');
-        btn.textContent = opt;
-        btn.className = 'option-btn';
-        btn.addEventListener('click', () => {
-            const allBtns = optionsContainer.querySelectorAll('button');
-            allBtns.forEach(b => b.disabled = true);
-
-            socket.emit('submit-answer', {
-                roomCode: currentRoom,
-                answerIndex: index
-            });
-        });
-        optionsContainer.appendChild(btn);
-    });
-});
-
-socket.on('waiting-for-others', ({ isCorrect, pointsEarned, correctAnswerText }) => {
-    questionText.style.display = 'none';
-    optionsContainer.style.display = 'none';
-    feedbackContainer.classList.remove('hidden');
-
-    if (isCorrect) {
-        feedbackText.textContent = `إجابة صحيحة! 🎉 (+${pointsEarned} نقطة)`;
-        feedbackText.className = 'feedback correct';
-    } else {
-        feedbackText.textContent = `إجابة خاطئة! ❌ (${pointsEarned} نقطة) | الإجابة الصحيحة: ${correctAnswerText}`;
-        feedbackText.className = 'feedback wrong';
-    }
-});
-
-socket.on('update-players', (players) => {
-    updatePlayersUI(players);
-});
-
-function updatePlayersUI(players) {
-    playersList.innerHTML = '';
+    const list = document.getElementById('players-list');
+    list.innerHTML = '';
     players.forEach(p => {
         const li = document.createElement('li');
-        li.textContent = `👤 ${p.name} - المجموع: ${p.score}`;
-        playersList.appendChild(li);
+        li.innerText = `${p.name} (النقاط: ${p.score})`;
+        list.appendChild(li);
     });
-    
-    const me = players.find(p => p.id === socket.id);
-    if (me) {
-        scoreDisplay.textContent = `المجموع الكلي: ${me.score}`;
-    }
+});
+
+function startGame() {
+    socket.emit('startGame', { roomCode: myRoomCode });
 }
 
-socket.on('game-over', (players) => {
-    let resultsHTML = `<h2>انتهت المسابقة! 🏆</h2>`;
-    let scoresHTML = '<h3>النتائج النهائية:</h3><ul style="list-style:none; padding:0;">';
-    players.sort((a, b) => b.score - a.score);
-    players.forEach((p, idx) => {
-        scoresHTML += `<li>${idx + 1}. 👤 ${p.name} - المجموع: ${p.score}</li>`;
-    });
-    scoresHTML += '</ul>';
-    
-    document.getElementById('question-container').innerHTML = resultsHTML + scoresHTML;
-    feedbackContainer.classList.add('hidden');
-    backToHomeBtn.classList.remove('hidden');
+// الاستماع لحدث إعادة تشغيل اللعبة لتنظيف واجهة النتائج وإعادتها لوضع اللعب
+socket.on('gameRestarted', () => {
+    const gameScreen = document.getElementById('game-screen');
+    gameScreen.innerHTML = `
+        <div class="game-header">
+            <span id="q-counter">السؤال: 1/--</span>
+            <span id="surah-title">سورة: --</span>
+            <span id="timer">الوقت: <span id="time-left">--</span>ث</span>
+        </div>
+        <h2 id="question-text">جارِ التحميل...</h2>
+        <div class="options-container">
+            <button id="opt-0" class="opt-btn" onclick="chooseOption(0)"></button>
+            <button id="opt-1" class="opt-btn" onclick="chooseOption(1)"></button>
+            <button id="opt-2" class="opt-btn" onclick="chooseOption(2)"></button>
+            <button id="opt-3" class="opt-btn" onclick="chooseOption(3)"></button>
+        </div>
+        <p id="feedback" style="font-weight: bold; margin-top: 15px;"></p>
+        <div id="scoreboard-container" style="margin-top: 20px;">
+            <h3>لوحة النتائج المباشرة:</h3>
+            <ul id="scoreboard"></ul>
+        </div>
+    `;
 });
+
+socket.on('newQuestion', ({ text, options, surah, timeLimit, questionNumber, total }) => {
+    document.getElementById('waiting-screen').classList.add('hidden');
+    document.getElementById('game-screen').classList.remove('hidden');
+    document.getElementById('question-text').innerText = text;
+    document.getElementById('surah-title').innerText = `سورة: ${surah}`;
+    document.getElementById('q-counter').innerText = `السؤال: ${questionNumber}/${total}`;
+    document.getElementById('feedback').innerText = '';
+
+    currentOptions = options;
+    
+    for (let i = 0; i < 4; i++) {
+        const btn = document.getElementById(`opt-${i}`);
+        if (btn) {
+            btn.innerText = options[i];
+            btn.disabled = false;
+            btn.style.background = '#3498db';
+        }
+    }
+
+    let timeLeft = timeLimit;
+    const timeLeftElem = document.getElementById('time-left');
+    if (timeLeftElem) timeLeftElem.innerText = timeLeft;
+    
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+        timeLeft--;
+        if (timeLeftElem) timeLeftElem.innerText = timeLeft;
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            for (let i = 0; i < 4; i++) {
+                const btn = document.getElementById(`opt-${i}`);
+                if (btn) btn.disabled = true;
+            }
+            const feedback = document.getElementById('feedback');
+            if (feedback) {
+                feedback.style.color = '#e74c3c';
+                feedback.innerText = 'انتهى الوقت!';
+            }
+        }
+    }, 1000);
+});
+
+function chooseOption(index) {
+    const selectedAnswer = currentOptions[index];
+    
+    for (let i = 0; i < 4; i++) {
+        const btn = document.getElementById(`opt-${i}`);
+        if (btn) btn.disabled = true;
+    }
+
+    const feedback = document.getElementById('feedback');
+    if (feedback) {
+        feedback.style.color = '#f39c12';
+        feedback.innerText = 'تم إرسال إجابتك، بانتظار باقي اللاعبين...';
+    }
+
+    socket.emit('submitAnswer', { roomCode: myRoomCode, selectedAnswer });
+}
+
+socket.on('answerResult', ({ correct }) => {
+    const feedback = document.getElementById('feedback');
+    if (!feedback) return;
+    if (!correct) {
+        feedback.style.color = '#e74c3c';
+        feedback.innerText = 'إجابة خاطئة! بانتظار انتهاء الوقت أو إجابة البقية...';
+    } else {
+        feedback.style.color = '#27ae60';
+        feedback.innerText = 'إجابة صحيحة! بانتظار انتهاء الوقت أو إجابة البقية...';
+    }
+});
+
+socket.on('updateScoreboardOnly', ({ players }) => {
+    const scoreboard = document.getElementById('scoreboard');
+    if (!scoreboard) return;
+    scoreboard.innerHTML = '';
+    players.forEach(p => {
+        const li = document.createElement('li');
+        li.innerHTML = `👤 <b>${p.name}</b> ➔ النقاط: <span style="color: #e67e22;">${p.score}</span> | ✅ صحيحة: <span style="color: #27ae60;">${p.correctCount}</span> | ❌ خاطئة: <span style="color: #e74c3c;">${p.wrongCount}</span>`;
+        scoreboard.appendChild(li);
+    });
+});
+
+socket.on('correctAnswerAnnouncement', ({ surah, fullAyah, players }) => {
+    clearInterval(timerInterval);
+    const feedback = document.getElementById('feedback');
+    if (feedback) {
+        feedback.innerHTML = `📖 <b>سورة ${surah}</b> - الإجابة الصحيحة: <span style="color: #2980b9;">${fullAyah}</span>`;
+    }
+
+    const scoreboard = document.getElementById('scoreboard');
+    if (!scoreboard) return;
+    scoreboard.innerHTML = '';
+    players.forEach(p => {
+        const li = document.createElement('li');
+        li.innerHTML = `👤 <b>${p.name}</b> ➔ النقاط: <span style="color: #e67e22;">${p.score}</span> | ✅ صحيحة: <span style="color: #27ae60;">${p.correctCount}</span> | ❌ خاطئة: <span style="color: #e74c3c;">${p.wrongCount}</span>`;
+        scoreboard.appendChild(li);
+    });
+});
+
+socket.on('gameOver', ({ players }) => {
+    clearInterval(timerInterval);
+    const gameScreen = document.getElementById('game-screen');
+    
+    const myPlayer = players.find(p => p.id === socket.id) || players[0];
+    
+    let historyHtml = '<h4>📋 مراجعة إجاباتك الشخصية:</h4><ul style="max-height: 220px; overflow-y: auto; text-align: right;">';
+    if (myPlayer && myPlayer.answerHistory && myPlayer.answerHistory.length > 0) {
+        myPlayer.answerHistory.forEach((ans, index) => {
+            const statusIcon = ans.isCorrect ? '✅' : '❌';
+            const colorStyle = ans.isCorrect ? '#27ae60' : '#e74c3c';
+            historyHtml += `<li>
+                <b>س${index+1}:</b> ${ans.question} (سورة ${ans.surah})<br>
+                إجابتك: <span style="color: ${colorStyle}; font-weight: bold;">${ans.selectedAnswer} ${statusIcon}</span>
+                ${!ans.isCorrect ? `<br>💡 الإجابة الصحيحة: <span style="color: #27ae60; font-weight: bold;">${ans.correctAnswer}</span>` : ''}
+            </li>`;
+        });
+    } else {
+        historyHtml += '<li>لم تقم بالإجابة على الأسئلة.</li>';
+    }
+    historyHtml += '</ul>';
+
+    gameScreen.innerHTML = `
+        <h2>🏆 انتهت المسابقة!</h2>
+        <h3>لوحة النتائج النهائية:</h3>
+        <ul id="final-scoreboard" style="margin: 10px 0;"></ul>
+        ${historyHtml}
+        <button class="main-btn" onclick="restartGameSameSettings()">🔄 إعادة اللعب مع الصديق (نفس الإعدادات)</button>
+        <button class="secondary-btn" onclick="goToSettingsScreen()">⚙️ تغيير الإعدادات والصعوبة</button>
+    `;
+    
+    const ul = document.getElementById('final-scoreboard');
+    if (ul) {
+        players.sort((a, b) => b.score - a.score).forEach(p => {
+            const li = document.createElement('li');
+            li.innerHTML = `👤 <b>${p.name}</b> ➔ المجموع: <span style="color: #e67e22;">${p.score} نقطة</span> | ✅ ${p.correctCount} | ❌ ${p.wrongCount}`;
+            ul.appendChild(li);
+        });
+    }
+});
+
+function restartGameSameSettings() {
+    socket.emit('restartGame', { roomCode: myRoomCode });
+}
+
+function goToSettingsScreen() {
+    document.getElementById('game-screen').classList.add('hidden');
+    document.getElementById('create-room-screen').classList.remove('hidden');
+}
