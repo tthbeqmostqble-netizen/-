@@ -1,4 +1,4 @@
-const socket = io("authentic-fulfillment-production-1553.up.railway.app");
+const socket = io("https://authentic-fulfillment-production-1553.up.railway.app/");
 
 let myRoomCode = '';
 let isHost = false;
