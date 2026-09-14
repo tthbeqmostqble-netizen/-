@@ -1,4 +1,4 @@
-const socket = io("https://authentic-fulfillment-production-1553.up.railway.app/");
+const socket = io();
 
 let myRoomCode = '';
 let isHost = false;
@@ -75,27 +75,25 @@ function startGame() {
     socket.emit('startGame', { roomCode: myRoomCode });
 }
 
-// الاستماع لحدث إعادة تشغيل اللعبة لتنظيف واجهة النتائج وإعادتها لوضع اللعب
+// إعادة ضبط واجهة اللعبة عند بدء جولة جديدة
 socket.on('gameRestarted', () => {
     const gameScreen = document.getElementById('game-screen');
     gameScreen.innerHTML = `
-        <div class="game-header">
+        <div style="display: flex; justify-content: space-between; font-weight: bold;">
             <span id="q-counter">السؤال: 1/--</span>
-            <span id="surah-title">سورة: --</span>
             <span id="timer">الوقت: <span id="time-left">--</span>ث</span>
         </div>
-        <h2 id="question-text">جارِ التحميل...</h2>
-        <div class="options-container">
-            <button id="opt-0" class="opt-btn" onclick="chooseOption(0)"></button>
-            <button id="opt-1" class="opt-btn" onclick="chooseOption(1)"></button>
-            <button id="opt-2" class="opt-btn" onclick="chooseOption(2)"></button>
-            <button id="opt-3" class="opt-btn" onclick="chooseOption(3)"></button>
+        <h3 id="surah-title" style="color: #16a085; margin-top: 15px;"></h3>
+        <h2 id="question-text" style="color: var(--text-color); font-size: 20px; text-align: center;"></h2>
+        <div id="options-container">
+            <button class="option-btn" id="opt-0" onclick="chooseOption(0)"></button>
+            <button class="option-btn" id="opt-1" onclick="chooseOption(1)"></button>
+            <button class="option-btn" id="opt-2" onclick="chooseOption(2)"></button>
+            <button class="option-btn" id="opt-3" onclick="chooseOption(3)"></button>
         </div>
-        <p id="feedback" style="font-weight: bold; margin-top: 15px;"></p>
-        <div id="scoreboard-container" style="margin-top: 20px;">
-            <h3>لوحة النتائج المباشرة:</h3>
-            <ul id="scoreboard"></ul>
-        </div>
+        <p id="feedback" style="font-weight: bold; min-height: 40px; margin-top: 15px; text-align: center;"></p>
+        <h4>لوحة النتائج الفورية:</h4>
+        <ul id="scoreboard"></ul>
     `;
 });
 
@@ -220,12 +218,20 @@ socket.on('gameOver', ({ players }) => {
     }
     historyHtml += '</ul>';
 
+    // زر إعادة اللعب يظهر فقط لمنشئ الغرفة (isHost)، بينما اللاعب الآخر تظهر له رسالة انتظار
+    let hostControlsHTML = '';
+    if (isHost) {
+        hostControlsHTML = `<button class="main-btn" onclick="restartGameSameSettings()">🔄 إعادة اللعب مع الصديق (نفس الإعدادات)</button>`;
+    } else {
+        hostControlsHTML = `<p style="color: #e67e22; font-weight: bold; margin-top: 15px;">⏳ بانتظار أن يقوم منشئ الغرفة بإعادة اللعب...</p>`;
+    }
+
     gameScreen.innerHTML = `
         <h2>🏆 انتهت المسابقة!</h2>
         <h3>لوحة النتائج النهائية:</h3>
         <ul id="final-scoreboard" style="margin: 10px 0;"></ul>
         ${historyHtml}
-        <button class="main-btn" onclick="restartGameSameSettings()">🔄 إعادة اللعب مع الصديق (نفس الإعدادات)</button>
+        ${hostControlsHTML}
         <button class="secondary-btn" onclick="goToSettingsScreen()">⚙️ تغيير الإعدادات والصعوبة</button>
     `;
     
@@ -244,6 +250,5 @@ function restartGameSameSettings() {
 }
 
 function goToSettingsScreen() {
-    document.getElementById('game-screen').classList.add('hidden');
-    document.getElementById('create-room-screen').classList.remove('hidden');
+    location.reload(); // إعادة تحميل الصفحة للعودة للقائمة الرئيسية بأمان
 }
